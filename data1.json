@@ -1,0 +1,13 @@
+[
+    {
+        "address": "Pskov",
+        "birthDate": "2000-01-01",
+        "email": "mityaev2@gmail.com",
+        "firstName": "Mityaev",
+        "lastName": "Oleg",
+        "middleName": "Igorevich",
+        "phoneNumbers": [
+            "+79517599768"
+        ]
+    }
+]
