@@ -8,16 +8,20 @@
 
 MainWidget::MainWidget(QWidget* parent)
     : QWidget(parent), model(new ContactModel(this)) {
+
     tableView = new QTableView(this);
     tableView->setModel(model);
+    tableView->setSortingEnabled(true);
 
-    addButton = new QPushButton("Add", this);
-    editButton = new QPushButton("Edit", this);
-    removeButton = new QPushButton("Delete", this);
-    saveButton = new QPushButton("Save", this);
-    loadButton = new QPushButton("Load", this);
+    addButton = new QPushButton(QStringLiteral("Добавить"), this);
+    editButton = new QPushButton(QStringLiteral("Редактировать"), this);
+    removeButton = new QPushButton(QStringLiteral("Удалить"), this);
+    saveButton = new QPushButton(QStringLiteral("Сохранить"), this);
+    loadButton = new QPushButton(QStringLiteral("Загрузить"), this);
+    searchEdit = new QLineEdit(this);
 
     auto* layout = new QVBoxLayout(this);
+    layout->addWidget(searchEdit);
     layout->addWidget(tableView);
     layout->addWidget(addButton);
     layout->addWidget(editButton);
@@ -25,6 +29,7 @@ MainWidget::MainWidget(QWidget* parent)
     layout->addWidget(saveButton);
     layout->addWidget(loadButton);
 
+    connect(searchEdit, &QLineEdit::textChanged, model, &ContactModel::filterContacts);
     connect(addButton, &QPushButton::clicked, this, &MainWidget::addContact);
     connect(editButton, &QPushButton::clicked, this, &MainWidget::editContact);
     connect(removeButton, &QPushButton::clicked, this, &MainWidget::removeContact);
@@ -43,7 +48,7 @@ void MainWidget::addContact() {
 void MainWidget::editContact() {
     auto index = tableView->currentIndex();
     if (!index.isValid()) {
-        QMessageBox::warning(this, "Error", "Select an entry to edit.");
+        QMessageBox::warning(this, QStringLiteral("Ошибка"), QStringLiteral("Выделите запись для редактирования."));
         return;
     }
     auto contact = model->getContact(index.row());
@@ -56,26 +61,26 @@ void MainWidget::editContact() {
 void MainWidget::removeContact() {
     auto index = tableView->currentIndex();
     if (!index.isValid()) {
-        QMessageBox::warning(this, "Error", "Select an entry to delete.");
+        QMessageBox::warning(this, QStringLiteral("Ошибка"), QStringLiteral("Выделите запись для удаления."));
         return;
     }
     model->removeContact(index.row());
 }
 
 void MainWidget::saveToFile() {
-    QString fileName = QFileDialog::getSaveFileName(this, "Save file", "", "JSON Files (*.json)");
+    QString fileName = QFileDialog::getSaveFileName(this, QStringLiteral("Сохранить файл"), "", "JSON Files (*.json)");
     if (!fileName.isEmpty()) {
         if (!model->saveToFile(fileName)) {
-            QMessageBox::critical(this, "Error", "Failed to save the file.");
+            QMessageBox::critical(this, QStringLiteral("Ошибка"), QStringLiteral("Ошибка при сохранении файла."));
         }
     }
 }
 
 void MainWidget::loadFromFile() {
-    QString fileName = QFileDialog::getOpenFileName(this, "Open file", "", "JSON Files (*.json)");
+    QString fileName = QFileDialog::getOpenFileName(this, QStringLiteral("Открыть файл"), "", "JSON Files (*.json)");
     if (!fileName.isEmpty()) {
         if (!model->loadFromFile(fileName)) {
-            QMessageBox::critical(this, "Error", "Failed to load the file.");
+            QMessageBox::critical(this, QStringLiteral("Ошибка"), QStringLiteral("Ошибка при загрузке файла."));
         }
     }
 }

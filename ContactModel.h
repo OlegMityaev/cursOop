@@ -11,7 +11,7 @@ struct Contact {
     QString address;
     QDate birthDate;
     QString email;
-    QVector<QString> phoneNumbers; // Может содержать несколько телефонов
+    QVector<QString> phoneNumbers;
 };
 
 class ContactModel : public QAbstractTableModel {
@@ -31,14 +31,20 @@ public:
     void addContact(const Contact& contact);
     void updateContact(int row, const Contact& contact);
     void removeContact(int row);
+    void sort(int column, Qt::SortOrder order);
 
     // Сохранение/загрузка данных
     bool saveToFile(const QString& fileName) const;
     bool loadFromFile(const QString& fileName);
 
+    // Поиск и фильтрация
+    void filterContacts(const QString& query);
+    void resetFilter();
+
     Contact getContact(int row) const;
 
 private:
-    QVector<Contact> contacts;
+    QVector<Contact> contacts;         // Отображаемые контакты
+    QVector<Contact> originalContacts; // Исходный полный список контактов
 };
 

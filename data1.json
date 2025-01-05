@@ -1,13 +1,36 @@
 [
     {
-        "address": "Pskov",
+        "address": "Пкоу",
         "birthDate": "2000-01-01",
-        "email": "mityaev2@gmail.com",
-        "firstName": "Mityaev",
-        "lastName": "Oleg",
-        "middleName": "Igorevich",
+        "email": "oleg@yandex.ru",
+        "firstName": "Оег",
+        "lastName": "Гол",
+        "middleName": "Мм",
         "phoneNumbers": [
-            "+79517599768"
+            "+78787878787"
+        ]
+    },
+    {
+        "address": "Мр",
+        "birthDate": "2024-08-12",
+        "email": "aa@gmail.com",
+        "firstName": "Аи",
+        "lastName": "Би",
+        "middleName": "Ми",
+        "phoneNumbers": [
+            "+78121234567",
+            "+56781235489"
+        ]
+    },
+    {
+        "address": "Сс",
+        "birthDate": "2000-01-04",
+        "email": "gol@gmail.com",
+        "firstName": "Аи",
+        "lastName": "Ви",
+        "middleName": "Ми",
+        "phoneNumbers": [
+            "+384652251305"
         ]
     }
 ]

@@ -8,25 +8,32 @@ ContactModel::ContactModel(QObject* parent)
     : QAbstractTableModel(parent) {
 }
 
-int ContactModel::rowCount(const QModelIndex& /*parent*/) const {
+int ContactModel::rowCount(const QModelIndex& parent) const {
+    if (parent.isValid())
+        return 0;
     return contacts.size();
 }
 
-int ContactModel::columnCount(const QModelIndex& /*parent*/) const {
-    return 6; // Колонки: ФИО, Адрес, Дата рождения, Email, Телефоны
+int ContactModel::columnCount(const QModelIndex& parent) const {
+    if (parent.isValid())
+        return 0;
+    return 7;
 }
 
 QVariant ContactModel::data(const QModelIndex& index, int role) const {
     if (!index.isValid() || role != Qt::DisplayRole)
         return {};
 
-    const auto& contact = contacts.at(index.row());
+    const Contact& contact = contacts.at(index.row());
+
     switch (index.column()) {
-    case 0: return contact.firstName + " " + contact.middleName + " " + contact.lastName;
-    case 1: return contact.address;
-    case 2: return contact.birthDate.toString("dd.MM.yyyy");
-    case 3: return contact.email;
-    case 4: {
+    case 0: return contact.firstName;
+    case 1: return contact.lastName;
+    case 2: return contact.middleName;
+    case 3: return contact.address;
+    case 4: return contact.birthDate.toString("yyyy-MM-dd");
+    case 5: return contact.email;
+    case 6: {
         QStringList phoneList = QStringList::fromVector(contact.phoneNumbers);
         return phoneList.join(", ");
     }
@@ -39,11 +46,13 @@ QVariant ContactModel::headerData(int section, Qt::Orientation orientation, int 
         return {};
 
     switch (section) {
-    case 0: return "Full Name";
-    case 1: return "Address";
-    case 2: return "Birth date";
-    case 3: return "Email";
-    case 4: return "Phone numbers";
+    case 0: return QStringLiteral("Имя");
+    case 1: return QStringLiteral("Фамилия");
+    case 2: return QStringLiteral("Отчество");
+    case 3: return QStringLiteral("Адрес");
+    case 4: return QStringLiteral("Дата рождения");
+    case 5: return "Email";
+    case 6: return QStringLiteral("Телефоны");
     default: return {};
     }
 }
@@ -83,6 +92,7 @@ Qt::ItemFlags ContactModel::flags(const QModelIndex& index) const {
 void ContactModel::addContact(const Contact& contact) {
     beginInsertRows(QModelIndex(), contacts.size(), contacts.size());
     contacts.append(contact);
+    originalContacts.append(contact); // ориг
     endInsertRows();
 }
 
@@ -98,6 +108,7 @@ void ContactModel::removeContact(int row) {
         return;
     beginRemoveRows(QModelIndex(), row, row);
     contacts.removeAt(row);
+    originalContacts.removeAt(row); // ориг
     endRemoveRows();
 }
 
@@ -148,13 +159,68 @@ bool ContactModel::loadFromFile(const QString& fileName) {
             contact.phoneNumbers.append(phone.toString());
         }
         contacts.append(contact);
+        originalContacts.append(contact);
     }
     endResetModel();
     return true;
+}
+
+void ContactModel::filterContacts(const QString& query) {
+    if (query.isEmpty()) {
+        resetFilter();
+        return;
+    }
+
+    beginResetModel();
+    contacts.clear();
+
+    for (const auto& contact : originalContacts) {
+        // Проверяем все поля на совпадение с запросом
+        if (contact.firstName.contains(query, Qt::CaseInsensitive) ||
+            contact.lastName.contains(query, Qt::CaseInsensitive) ||
+            contact.middleName.contains(query, Qt::CaseInsensitive) ||
+            contact.address.contains(query, Qt::CaseInsensitive) ||
+            contact.email.contains(query, Qt::CaseInsensitive) ||
+            QStringList::fromVector(contact.phoneNumbers).join(", ").contains(query, Qt::CaseInsensitive) ||
+            contact.birthDate.toString("yyyy-MM-dd").contains(query)) {
+            contacts.append(contact);
+        }
+    }
+
+    endResetModel();
+}
+
+void ContactModel::resetFilter() {
+    beginResetModel();
+    contacts = originalContacts; // Восстанавливаем из исходного списка
+    endResetModel();
 }
 
 Contact ContactModel::getContact(int row) const {
     if (row < 0 || row >= contacts.size())
         return {};
     return contacts[row];
+}
+
+
+void ContactModel::sort(int column, Qt::SortOrder order) {
+    beginResetModel(); // Уведомляем представление о начале изменений
+
+    // Лямбда-функция для сравнения элементов
+    auto comparator = [column, order](const Contact& a, const Contact& b) {
+        switch (column) {
+        case 0: return order == Qt::AscendingOrder ? a.firstName < b.firstName : a.firstName > b.firstName;
+        case 1: return order == Qt::AscendingOrder ? a.lastName < b.lastName : a.lastName > b.lastName;
+        case 2: return order == Qt::AscendingOrder ? a.middleName < b.middleName : a.middleName > b.middleName;
+        case 3: return order == Qt::AscendingOrder ? a.address < b.address : a.address > b.address;
+        case 4: return order == Qt::AscendingOrder ? a.birthDate < b.birthDate : a.birthDate > b.birthDate;
+        case 5: return order == Qt::AscendingOrder ? a.email < b.email : a.email > b.email;
+        case 6: return order == Qt::AscendingOrder ? QStringList::fromVector(a.phoneNumbers).join(", ") < QStringList::fromVector(b.phoneNumbers).join(", ") : QStringList::fromVector(a.phoneNumbers).join(", ") > QStringList::fromVector(b.phoneNumbers).join(", ");
+        default: return false;
+        }
+    };
+
+    std::sort(contacts.begin(), contacts.end(), comparator);
+
+    endResetModel(); // Уведомляем представление о завершении изменений
 }

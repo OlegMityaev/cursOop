@@ -1,5 +1,8 @@
 ﻿#pragma once
 #include <QDialog>
+#include <QVector>
+#include <QVBoxLayout>
+#include <QPushButton>
 #include "contactmodel.h"
 
 class QLineEdit;
@@ -12,8 +15,12 @@ public:
 
 private slots:
     void accept() override;
+    void addPhoneNumberField();
+    void removePhoneNumberField();
 
 private:
+    void updateRemoveButtonVisibility(); // Обновить видимость кнопки "-"
+
     Contact& contact;
     QLineEdit* firstNameEdit;
     QLineEdit* lastNameEdit;
@@ -22,5 +29,11 @@ private:
     QDateEdit* birthDateEdit;
     QLineEdit* emailEdit;
     QLineEdit* phoneNumbersEdit;
+
+    QVBoxLayout* phoneNumbersLayout; // Лейаут для хранения всех полей телефонов
+    QHBoxLayout* phoneButtonsLayout;
+    QPushButton* addPhoneButton;     // Кнопка для добавления телефона
+    QPushButton* removePhoneButton;  // Кнопка для удаления телефона
+    QVector<QLineEdit*> phoneNumbersEdits;
 };
 

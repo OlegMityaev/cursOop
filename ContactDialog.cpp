@@ -7,12 +7,13 @@
 #include <QPushButton>
 #include <QRegularExpression>
 #include <QMessageBox>
+#include <QString>
 
 
 
 ContactDialog::ContactDialog(Contact& contact, QWidget* parent)
     : QDialog(parent), contact(contact) {
-    setWindowTitle("Editing a contact");
+    setWindowTitle(QStringLiteral("Редактирование контакта"));
 
     firstNameEdit = new QLineEdit(this);
     firstNameEdit->setText(contact.firstName);
@@ -33,57 +34,155 @@ ContactDialog::ContactDialog(Contact& contact, QWidget* parent)
     emailEdit = new QLineEdit(this);
     emailEdit->setText(contact.email);
 
-    phoneNumbersEdit = new QLineEdit(this);
-    phoneNumbersEdit->setText(QStringList::fromVector(contact.phoneNumbers).join(", "));
 
-    auto* formLayout = new QFormLayout;
-    formLayout->addRow("First Name", firstNameEdit);
-    formLayout->addRow("Last Name", lastNameEdit);
-    formLayout->addRow("Middle Name", middleNameEdit);
-    formLayout->addRow("Address", addressEdit);
-    formLayout->addRow("Birth Date", birthDateEdit);
+    // Лейаут для ввода телефонных номеров
+    phoneNumbersLayout = new QVBoxLayout;
+    QLineEdit* initialPhoneNumberEdit;
+    for (const auto& phone : contact.phoneNumbers) {
+        initialPhoneNumberEdit = new QLineEdit(this);
+        initialPhoneNumberEdit->setText(phone);
+        phoneNumbersLayout->addWidget(initialPhoneNumberEdit);
+        phoneNumbersEdits.append(initialPhoneNumberEdit);
+    }
+
+    phoneButtonsLayout = new QHBoxLayout;
+
+    // Кнопка "+" для добавления нового номера
+    addPhoneButton = new QPushButton("+", this);
+    removePhoneButton = new QPushButton("-", this);
+    phoneButtonsLayout->addWidget(addPhoneButton);
+    phoneButtonsLayout->addWidget(removePhoneButton);
+    connect(addPhoneButton, &QPushButton::clicked, this, &ContactDialog::addPhoneNumberField);
+    connect(removePhoneButton, &QPushButton::clicked, this, &ContactDialog::removePhoneNumberField);
+
+
+    QFormLayout* formLayout = new QFormLayout;
+    formLayout->addRow(QStringLiteral("Имя"), firstNameEdit);
+    formLayout->addRow(QStringLiteral("Фамилия"), lastNameEdit);
+    formLayout->addRow(QStringLiteral("Отчество"), middleNameEdit);
+    formLayout->addRow(QStringLiteral("Адрес"), addressEdit);
+    formLayout->addRow(QStringLiteral("Дата рождения"), birthDateEdit);
     formLayout->addRow("Email", emailEdit);
-    formLayout->addRow("Phone numbers", phoneNumbersEdit);
 
-    auto* buttonBox = new QHBoxLayout;
-    auto* okButton = new QPushButton("Ok", this);
-    auto* cancelButton = new QPushButton("Cancel", this);
+
+    QVBoxLayout* phoneGroupLayout = new QVBoxLayout;
+    phoneGroupLayout->addLayout(phoneNumbersLayout);
+    phoneGroupLayout->addLayout(phoneButtonsLayout);
+    formLayout->addRow(QStringLiteral("Телефоны"), phoneGroupLayout);
+
+    QHBoxLayout* buttonBox = new QHBoxLayout;
+    QPushButton* okButton = new QPushButton(QStringLiteral("OK"), this);
+    QPushButton* cancelButton = new QPushButton(QStringLiteral("Отмена"), this);
 
     buttonBox->addWidget(okButton);
     buttonBox->addWidget(cancelButton);
 
-    auto* mainLayout = new QVBoxLayout(this);
+    QVBoxLayout* mainLayout = new QVBoxLayout(this);
     mainLayout->addLayout(formLayout);
     mainLayout->addLayout(buttonBox);
 
     connect(okButton, &QPushButton::clicked, this, &ContactDialog::accept);
     connect(cancelButton, &QPushButton::clicked, this, &ContactDialog::reject);
+
+    updateRemoveButtonVisibility();
+}
+
+void ContactDialog::addPhoneNumberField() {
+    // Создаём новое поле для телефона
+    auto* newPhoneNumberEdit = new QLineEdit(this);
+    newPhoneNumberEdit->setPlaceholderText(QStringLiteral("Новый телефон"));
+
+    phoneNumbersEdits.append(newPhoneNumberEdit);
+    phoneNumbersLayout->insertWidget(phoneNumbersLayout->count() - 1, newPhoneNumberEdit);
+
+    updateRemoveButtonVisibility();
+}
+
+void ContactDialog::removePhoneNumberField() {
+    // Удаляем последнее поле телефона, если их больше одного
+    if (phoneNumbersEdits.size() > 1) {
+        auto* lastPhoneNumberEdit = phoneNumbersEdits.takeLast();
+        phoneNumbersLayout->removeWidget(lastPhoneNumberEdit);
+        delete lastPhoneNumberEdit;
+
+        // Обновляем видимость кнопки "-"
+        updateRemoveButtonVisibility();
+    }
+}
+
+void ContactDialog::updateRemoveButtonVisibility() {
+    // Показываем кнопку "-", только если есть больше одного поля
+    removePhoneButton->setVisible(phoneNumbersEdits.size() > 1);
 }
 
 void ContactDialog::accept() {
     // Валидация данных
-    QRegularExpression nameRegex(R"(^[A-ZА-Я][a-zа-яёЁ\s-]*[a-zа-яёЁ]$)");
-    QRegularExpression emailRegex(R"(^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$)");
-    QRegularExpression phoneRegex(R"(^(\+?\d{1,3})?[\s\-]?\(?\d{1,4}\)?[\s\-]?\d{1,9}([\s\-]?\d{1,4})?$)");
+    QString firstName = firstNameEdit->text().trimmed();
+    QString lastName = lastNameEdit->text().trimmed();
+    QString middleName = middleNameEdit->text().trimmed();
+    QString address = addressEdit->text().trimmed();
+    QString email = emailEdit->text().trimmed();
+    QDate birthDate = birthDateEdit->date();
 
-    if (!nameRegex.match(firstNameEdit->text()).hasMatch()) {
-        QMessageBox::warning(this, "Error", "Invalid name.");
+    QVector<QString> phonesV;
+    for (auto phoneEdit : phoneNumbersEdits) {
+        phonesV.append(phoneEdit->text().trimmed());
+    }
+     
+
+    QRegularExpression nameRegex(R"(^[\p{Lu}][\p{Ll}\p{N}\- ]*[^\-\s]$)");
+    QRegularExpression emailRegex(QStringLiteral("(^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$)"));
+    QRegularExpression phoneRegex(R"(^(\+?\d{1,3})?[\s\-]?\(?\d{3}\)?[\s\-]?\d{3}[\s\-]?\d{2}[\s\-]?\d{2}$)");
+
+    if (!nameRegex.match(firstName).hasMatch()) {
+        QMessageBox::warning(this, QStringLiteral("Ошибка"), QStringLiteral("Некорректное имя."));
         return;
     }
 
-    if (!emailRegex.match(emailEdit->text()).hasMatch()) {
-        QMessageBox::warning(this, "Error", "Invalid email.");
+    if (!nameRegex.match(lastName).hasMatch()) {
+        QMessageBox::warning(this, QStringLiteral("Ошибка"), QStringLiteral("Некорректная фамилия."));
         return;
+    }
+
+    if (!nameRegex.match(middleName).hasMatch()) {
+        QMessageBox::warning(this, QStringLiteral("Ошибка"), QStringLiteral("Некорректное отчество."));
+        return;
+    }
+
+    if (!nameRegex.match(address).hasMatch()) {
+        QMessageBox::warning(this, QStringLiteral("Ошибка"), QStringLiteral("Некорректный адрес."));
+        return;
+    }
+
+    if (birthDate >= QDate::currentDate()) {
+        QMessageBox::warning(this, QStringLiteral("Ошибка"), QStringLiteral("Некорректная дата."));
+        return;
+    }
+
+    if (!emailRegex.match(email).hasMatch()) {
+        QMessageBox::warning(this, QStringLiteral("Ошибка"), QStringLiteral("Некорректный email."));
+        return;
+    }
+
+    for (auto phone : phonesV) {
+        if (!phoneRegex.match(phone).hasMatch()) {
+            QMessageBox::warning(this, QStringLiteral("Ошибка"), QStringLiteral("Некорректный телефон."));
+            return;
+        }
+    }
+
+    for (auto& phone : phonesV) {
+        phone = phone.replace(QRegularExpression(R"((?<!^)\D)"), "");
     }
 
     // Установка данных
-    contact.firstName = firstNameEdit->text().trimmed();
-    contact.lastName = lastNameEdit->text().trimmed();
-    contact.middleName = middleNameEdit->text().trimmed();
-    contact.address = addressEdit->text().trimmed();
-    contact.birthDate = birthDateEdit->date();
-    contact.email = emailEdit->text().trimmed();
-    contact.phoneNumbers = phoneNumbersEdit->text().split(", ").toVector();
+    contact.firstName = firstName;
+    contact.lastName = lastName;
+    contact.middleName = middleName;
+    contact.address = address;
+    contact.birthDate = birthDate;
+    contact.email = email;
+    contact.phoneNumbers = phonesV;
 
     QDialog::accept();
 }

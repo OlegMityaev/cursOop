@@ -2,6 +2,7 @@
 
 #include <QtWidgets/QWidget>
 #include "contactmodel.h"
+#include <QLineEdit>
 
 class QTableView;
 class QPushButton;
@@ -26,6 +27,7 @@ private:
     QPushButton* removeButton;
     QPushButton* saveButton;
     QPushButton* loadButton;
+    QLineEdit* searchEdit;
 };
 
 
